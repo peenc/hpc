@@ -19,31 +19,25 @@ int main() {
     int N = 5112;
     size_t size = N * N * sizeof(float);
 
-    // aloca host
     float *hA = (float*)malloc(size);
     float *hB = (float*)malloc(size);
     float *hC = (float*)malloc(size);
 
-    // inicializa
     for (int i = 0; i < N*N; i++) {
         hA[i] = 1.0f;
         hB[i] = 1.0f;
     }
 
-    // aloca device
     float *dA, *dB, *dC;
     cudaMalloc(&dA, size);
     cudaMalloc(&dB, size);
     cudaMalloc(&dC, size);
 
-    // cria eventos CUDA
     cudaEvent_t start, stop;
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
 
-    // -----------------------------
-    // Tempo Host -> Device
-    // -----------------------------
+    // tempo host device
     cudaEventRecord(start);
 
     cudaMemcpy(dA, hA, size, cudaMemcpyHostToDevice);
@@ -59,9 +53,7 @@ int main() {
     dim3 threads(16, 16);
     dim3 blocks((N + 15) / 16, (N + 15) / 16);
 
-    // -----------------------------
-    // Tempo do Kernel
-    // -----------------------------
+    // tempo do kernel
     cudaEventRecord(start);
 
     matMulKernel<<<blocks, threads>>>(dA, dB, dC, N);
@@ -73,9 +65,7 @@ int main() {
     float timeKernel = 0;
     cudaEventElapsedTime(&timeKernel, start, stop);
 
-    // -----------------------------
-    // Tempo Device -> Host
-    // -----------------------------
+    // tempo device host
     cudaEventRecord(start);
 
     cudaMemcpy(hC, dC, size, cudaMemcpyDeviceToHost);
@@ -88,7 +78,7 @@ int main() {
 
     // resultado
     printf("C[0] = %.1f\n", hC[0]);
-    printf("\n===== TEMPOS CUDA (N = %d) =====\n", N);
+    printf("\n===== TEMPOS CUDA Multiplicação de Matrizes(N = %d) =====\n", N);
     printf("Cópia Host -> Device:  %.3f ms\n", timeCopyIn);
     printf("Kernel:                %.3f ms\n", timeKernel);
     printf("Cópia Device -> Host:  %.3f ms\n", timeCopyOut);

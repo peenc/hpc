@@ -2,11 +2,8 @@
 #include <cstdlib>
 #include <cuda_runtime.h>
 
-#define TILE 16
+#define TILE 32
 
-// ---------------------------------------------------------------
-// KERNEL OTIMIZADO COM MEMÓRIA COMPARTILHADA
-// ---------------------------------------------------------------
 __global__ void matMulShared(float *A, float *B, float *C, int N) {
 
     __shared__ float tileA[TILE][TILE];
@@ -47,9 +44,6 @@ __global__ void matMulShared(float *A, float *B, float *C, int N) {
 }
 
 
-// ---------------------------------------------------------------
-// MAIN COMPLETO (SEU CÓDIGO ORIGINAL + SHARED MEMORY)
-// ---------------------------------------------------------------
 int main() {
     int N = 5112;
     size_t size = N * N * sizeof(float);
@@ -72,9 +66,8 @@ int main() {
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
 
-    // -----------------------------
-    // Tempo Host -> Device
-    // -----------------------------
+     // tempo Host device
+ 
     cudaEventRecord(start);
 
     cudaMemcpy(dA, hA, size, cudaMemcpyHostToDevice);
@@ -86,13 +79,12 @@ int main() {
     float timeCopyIn = 0;
     cudaEventElapsedTime(&timeCopyIn, start, stop);
 
-    // configura blocos
+    // configura os blocos
     dim3 threads(TILE, TILE);
     dim3 blocks((N + TILE - 1) / TILE, (N + TILE - 1) / TILE);
 
-    // -----------------------------
-    // Tempo do Kernel (Shared Memory)
-    // -----------------------------
+    // tempo do Kernel (memória compartilhada)
+   
     cudaEventRecord(start);
 
     matMulShared<<<blocks, threads>>>(dA, dB, dC, N);
@@ -104,9 +96,8 @@ int main() {
     float timeKernel = 0;
     cudaEventElapsedTime(&timeKernel, start, stop);
 
-    // -----------------------------
-    // Tempo Device -> Host
-    // -----------------------------
+    // tempo device host
+    
     cudaEventRecord(start);
 
     cudaMemcpy(hC, dC, size, cudaMemcpyDeviceToHost);
@@ -119,7 +110,7 @@ int main() {
 
     // resultado
     printf("C[0] = %.1f\n", hC[0]);
-    printf("\n===== TEMPOS CUDA (N = %d) =====\n", N);
+    printf("\n===== TEMPOS CUDA Multiplicação de Matrizes Memoria Compartilhada (N = %d) =====\n", N);
     printf("Cópia Host -> Device:  %.3f ms\n", timeCopyIn);
     printf("Kernel Shared:         %.3f ms\n", timeKernel);
     printf("Cópia Device -> Host:  %.3f ms\n", timeCopyOut);
