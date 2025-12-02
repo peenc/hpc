@@ -2,9 +2,11 @@
 #include <cstdlib>
 #include <cuda_runtime.h>
 
+#define TILE 16
+
 __global__ void matMulKernel(float *A, float *B, float *C, int N) {
-    int row = blockIdx.y * blockDim.y + threadIdx.y;
-    int col = blockIdx.x * blockDim.x + threadIdx.x;
+    int row = blockIdx.y * TILE + threadIdx.y;
+    int col = blockIdx.x * TILE + threadIdx.x;
 
     if (row < N && col < N) {
         float sum = 0;
@@ -16,7 +18,7 @@ __global__ void matMulKernel(float *A, float *B, float *C, int N) {
 }
 
 int main() {
-    int N = 5112;
+    int N = 24000;
     size_t size = N * N * sizeof(float);
 
     float *hA = (float*)malloc(size);
@@ -37,39 +39,33 @@ int main() {
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
 
-    // tempo host device
+    // tempo host -> device
     cudaEventRecord(start);
-
     cudaMemcpy(dA, hA, size, cudaMemcpyHostToDevice);
     cudaMemcpy(dB, hB, size, cudaMemcpyHostToDevice);
-
     cudaEventRecord(stop);
     cudaEventSynchronize(stop);
 
     float timeCopyIn = 0;
     cudaEventElapsedTime(&timeCopyIn, start, stop);
 
-    // configura blocos
-    dim3 threads(16, 16);
-    dim3 blocks((N + 15) / 16, (N + 15) / 16);
+    // configura blocos usando TILE
+    dim3 threads(TILE, TILE);
+    dim3 blocks((N + TILE - 1) / TILE, (N + TILE - 1) / TILE);
 
     // tempo do kernel
     cudaEventRecord(start);
-
     matMulKernel<<<blocks, threads>>>(dA, dB, dC, N);
     cudaDeviceSynchronize();
-
     cudaEventRecord(stop);
     cudaEventSynchronize(stop);
 
     float timeKernel = 0;
     cudaEventElapsedTime(&timeKernel, start, stop);
 
-    // tempo device host
+    // device -> host
     cudaEventRecord(start);
-
     cudaMemcpy(hC, dC, size, cudaMemcpyDeviceToHost);
-
     cudaEventRecord(stop);
     cudaEventSynchronize(stop);
 
@@ -78,13 +74,12 @@ int main() {
 
     // resultado
     printf("C[0] = %.1f\n", hC[0]);
-    printf("\n===== TEMPOS CUDA Multiplicação de Matrizes(N = %d) =====\n", N);
+    printf("\n===== TEMPOS CUDA Multiplicação de Matrizes (N = %d) =====\n", N);
     printf("Cópia Host -> Device:  %.3f ms\n", timeCopyIn);
     printf("Kernel:                %.3f ms\n", timeKernel);
     printf("Cópia Device -> Host:  %.3f ms\n", timeCopyOut);
     printf("Tempo TOTAL:           %.3f ms\n", timeCopyIn + timeKernel + timeCopyOut);
 
-    // libera
     cudaFree(dA);
     cudaFree(dB);
     cudaFree(dC);

@@ -2,7 +2,7 @@
 #include <cstdlib>
 #include <cuda_runtime.h>
 
-#define TILE 32
+#define TILE 16
 
 __global__ void matMulShared(float *A, float *B, float *C, int N) {
 
@@ -45,7 +45,7 @@ __global__ void matMulShared(float *A, float *B, float *C, int N) {
 
 
 int main() {
-    int N = 5112;
+    int N = 24000;
     size_t size = N * N * sizeof(float);
 
     float *hA = (float*)malloc(size);
@@ -66,7 +66,7 @@ int main() {
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
 
-     // tempo Host device
+     // tempo host device
  
     cudaEventRecord(start);
 
@@ -108,7 +108,7 @@ int main() {
     float timeCopyOut = 0;
     cudaEventElapsedTime(&timeCopyOut, start, stop);
 
-    // resultado
+    // printando os resultados
     printf("C[0] = %.1f\n", hC[0]);
     printf("\n===== TEMPOS CUDA Multiplicação de Matrizes Memoria Compartilhada (N = %d) =====\n", N);
     printf("Cópia Host -> Device:  %.3f ms\n", timeCopyIn);
